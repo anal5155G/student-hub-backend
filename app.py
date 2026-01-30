@@ -11,8 +11,10 @@ CORS(app)
 # CONNECT TO MONGODB ATLAS
 # -----------------------
 MONGO_URI = os.environ.get("MONGO_URI")
-client = MongoClient(MONGO_URI)
+if not MONGO_URI:
+    raise Exception("MONGO_URI not found! Add it in Render Environment Variables.")
 
+client = MongoClient(MONGO_URI)
 db = client["student_hub"]
 collection = db["student_details"]
 
@@ -24,7 +26,7 @@ def home():
     return "Backend is running 🚀"
 
 # -----------------------
-# ROUTE: CONTACT FORM
+# ROUTE: BOOK / CONTACT FORM
 # -----------------------
 @app.route("/book", methods=["POST"])
 def book():
@@ -40,5 +42,26 @@ def book():
         "submitted_at": datetime.utcnow()
     }
 
-    collection.insert_one(document)
-    return jsonify({"message": "Your message was saved successfully ✅"})
+    try:
+        collection.insert_one(document)
+        return jsonify({"message": "Your message was saved successfully ✅"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# -----------------------
+# TEST MONGODB CONNECTION
+# -----------------------
+@app.route("/test-db")
+def test_db():
+    try:
+        collection.insert_one({"test": "MongoDB connected"})
+        return jsonify({"status": "success", "message": "MongoDB connected 🎉"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# -----------------------
+# RUN SERVER
+# -----------------------
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
